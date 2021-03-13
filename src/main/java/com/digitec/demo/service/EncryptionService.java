@@ -1,67 +1,60 @@
 package com.digitec.demo.service;
 
-import com.digitec.demo.controller.dto.CipherParameters;
-import com.digitec.demo.controller.dto.CipherResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.digitec.demo.contract.EncryptionServiceInterface;
+import com.digitec.demo.contract.KeyServiceInterface;
+import com.digitec.demo.dto.CipherNode;
+import com.google.crypto.tink.Aead;
+import com.google.crypto.tink.KeysetHandle;
+import com.google.crypto.tink.Mac;
+import com.google.crypto.tink.aead.AeadConfig;
+import com.google.crypto.tink.mac.MacConfig;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.Mac;
-import java.util.Arrays;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
 
 @Service
-public class EncryptionService {
+public class EncryptionService implements EncryptionServiceInterface {
 
-    private final Logger logger = LoggerFactory.getLogger(EncryptionService.class);
+    private final String ad = "mmKxoc6TPFln7pSi99ABrFXM3XiCVuozY0UNd3A69T8i4mGe9g6jLO6NkTaje3K";
+
     @Resource
-    CipherService cipherService;
+    private KeyServiceInterface keyService;
 
-    public CipherResult cipher(byte[] message) {
-
-        try {
-            CipherParameters cipherParameters = cipherService.initCipher(Cipher.ENCRYPT_MODE);
-            Cipher cipher = cipherParameters.getCipherNode().getCipher();
-            Mac mac = cipherParameters.getMacNode().getMac();
-
-            byte[] cipherText = cipher.doFinal(message);
-
-            return CipherResult.builder()
-                    .iv(cipher.getIV())
-                    .salt(cipherParameters.getCipherNode().getSalt())
-                    .cipherText(cipherText)
-                    .mac(mac.doFinal(cipherText))
-                    .saltMac(cipherParameters.getMacNode().getSalt())
-                    .build();
-        } catch (BadPaddingException | IllegalBlockSizeException e) {
-            e.printStackTrace();
-        }
-        return null;
+    @PostConstruct
+    private void init() throws GeneralSecurityException, IOException {
+        AeadConfig.register();
+        MacConfig.register();
     }
 
-    public byte[] decipher(byte[] cypherText) {
-
-        CipherResult cipherResult = CipherResult.fromBytes(cypherText);
-
-        try {
-            CipherParameters cipherParameters = cipherService.initDecipher(Cipher.DECRYPT_MODE, cipherResult.getIv(), cipherResult.getSalt(), cipherResult.getSaltMac());
-
-            byte[] cipherTextMac = cipherParameters.getMacNode().getMac().doFinal(cipherResult.getCipherText());
-
-            if (Arrays.equals(cipherTextMac, cipherResult.getMac())) {
-                Cipher cipher = cipherParameters.getCipherNode().getCipher();
-                return (cipher != null) ? cipher.doFinal(cipherResult.getCipherText()) : null;
-            }
-
-            throw new RuntimeException("Signature does not match");
-
-        } catch (BadPaddingException | IllegalBlockSizeException e) {
-            e.printStackTrace();
-        }
-
-        return null;
+    @Override
+    public CipherNode symetricEncrypt(byte[] input) throws IOException, GeneralSecurityException {
+        Aead aead = getAead();
+        Mac mac = getMac();
+        byte[] cipherText = aead.encrypt(input, ad.getBytes(StandardCharsets.UTF_8));
+        byte[] tag = mac.computeMac(cipherText);
+        return CipherNode.builder().cipherText(cipherText).mac(tag).build();
     }
+
+    private Mac getMac() throws IOException, GeneralSecurityException {
+        KeysetHandle macKeysetHandle = keyService.loadMacKey();
+        return macKeysetHandle.getPrimitive(Mac.class);
+    }
+
+    private Aead getAead() throws IOException, GeneralSecurityException {
+        KeysetHandle keysetHandle = keyService.loadKey();
+        return keysetHandle.getPrimitive(Aead.class);
+    }
+
+    @Override
+    public byte[] symetricDecrypt(byte[] ciphertext, byte[] macTag) throws IOException, GeneralSecurityException {
+        Aead aead = getAead();
+        Mac mac = getMac();
+        mac.verifyMac(macTag, ciphertext);
+        return aead.decrypt(ciphertext, ad.getBytes(StandardCharsets.UTF_8));
+    }
+
 }

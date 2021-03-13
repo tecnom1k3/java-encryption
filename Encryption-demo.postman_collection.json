@@ -1,0 +1,105 @@
+{
+	"info": {
+		"_postman_id": "328def2e-3938-4cae-9d66-77f8576d37a3",
+		"name": "Encryption demo",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "create private keys",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:8080/security/key",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"security",
+						"key"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "rotate private key",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": ""
+				},
+				"url": {
+					"raw": "http://localhost:8080/security/key",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"security",
+						"key"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "encrypt",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "foo bar"
+				},
+				"url": {
+					"raw": "http://localhost:8080/security/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"security",
+						""
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "decrypt",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "AQt2GiN/2/V65lbCVpNP/PkTARBpATn3FQlI+N5HshpQYj15YKz5vPa5uSYDDJ8bsF8VP18JXCB/Qlx0Ug=="
+				},
+				"url": {
+					"raw": "http://localhost:8080/security/",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"security",
+						""
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
